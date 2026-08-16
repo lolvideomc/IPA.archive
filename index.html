@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Менеджер IPA-файлов</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f6f8fa;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        h1 {
+            font-size: 24px;
+            color: #24292e;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #2ea44f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn:hover {
+            background: #2c974b;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(46, 164, 79, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #24292e;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn-danger {
+            background: #d73a49;
+        }
+        
+        .btn-danger:hover {
+            background: #cb2431;
+        }
+        
+        #file-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .file-item {
+            padding: 15px 25px;
+            border-bottom: 1px solid #e1e4e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.15s;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-item:hover {
+            background: #f6f8fa;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        
+        .file-icon {
+            font-size: 20px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .file-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #0366d6;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        
+        .file-name:hover {
+            text-decoration: underline;
+        }
+        
+        .file-meta {
+            font-size: 13px;
+            color: #586069;
+            margin-left: 10px;
+        }
+        
+        .file-size {
+            font-size: 13px;
+            color: #586069;
+            white-space: nowrap;
+            margin-left: 15px;
+        }
+        
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #586069;
+        }
+        
+        .empty-state .big-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .empty-state h3 {
+            font-size: 20px;
+            color: #24292e;
+            margin-bottom: 8px;
+        }
+        
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: #586069;
+        }
+        
+        .loading .spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            font-size: 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 15px;
+            color: #24292e;
+        }
+        
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-content input:focus {
+            outline: none;
+            border-color: #2ea44f;
+            box-shadow: 0 0 0 3px rgba(46, 164, 79, 0.15);
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .modal-actions .btn {
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+        
+        .path-breadcrumb {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 14px;
+            color: #586069;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .path-breadcrumb span {
+            color: #0366d6;
+            cursor: pointer;
+        }
+        
+        .path-breadcrumb span:hover {
+            text-decoration: underline;
+        }
+        
+        .status-msg {
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .status-msg.success {
+            display: block;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-msg.error {
+            display: block;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .header-actions {
+                justify-content: stretch;
+            }
+            
+            .header-actions .btn {
+                flex: 1;
+                justify-content: center;
+            }
+            
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .file-size {
+                margin-left: 42px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📦 Менеджер IPA-файлов</h1>
+        <div class="header-actions">
+            <button class="btn" onclick="openCreateFolder()">📁 Создать папку</button>
+            <button class="btn btn-secondary" onclick="refreshList()">🔄 Обновить</button>
+            <a href="https://github.com/ВАШ_ЛОГИН/ИМЯ_РЕПО/upload/main" target="_blank" class="btn btn-secondary">⬆ Загрузить файлы</a>
+        </div>
+    </div>
+
+    <div class="path-breadcrumb" id="breadcrumb">
+        📂 <span onclick="navigateTo('')">Корень</span>
+        <span id="path-display"></span>
+    </div>
+
+    <div id="status-msg" class="status-msg"></div>
+
+    <div id="file-list">
+        <div class="loading">
+            <div class="spinner">⏳</div>
+            <p>Загрузка списка файлов...</p>
+        </div>
+    </div>
+
+    <!-- Модалка для создания папки -->
+    <div class="modal" id="folderModal">
+        <div class="modal-content">
+            <h2>📁 Создать папку</h2>
+            <p style="color: #586069; margin-bottom: 15px; font-size: 14px;">
+                Папка будет создана в текущей директории: <strong id="folder-path-display">/</strong>
+            </p>
+            <input type="text" id="folderNameInput" placeholder="Имя папки (например: builds)" />
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCreateFolder()">Отмена</button>
+                <button class="btn" onclick="createFolder()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚙️ НАСТРОЙКИ — ИЗМЕНИТЕ ПОД СЕБЯ
+        const USERNAME = 'ВАШ_ЛОГИН';
+        const REPO = 'lolvideomc.github.io';
+        const BRANCH = 'main';
+        
+        // ТЕКУЩАЯ ПАПКА (можно менять, когда переходим по папкам)
+        let currentPath = '';
+        
+        // Токен GitHub (опционально, но увеличит лимит запросов)
+        // const GITHUB_TOKEN = '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';
+
+        // Получаем элементы
+        const fileListEl = document.getElementById('file-list');
+        const statusMsg = document.getElementById('status-msg');
+        const breadcrumb = document.getElementById('path-display');
+        
+        // Функция для получения списка содержимого папки
+        async function getContents(path = '') {
+            const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${path}?ref=${BRANCH}`;
+            
+            try {
+                const headers = {};
+                // if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+                
+                const response = await fetch(apiUrl, { headers });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return { items: [], isRoot: path === '' };
+                    }
+                    throw new Error(`Ошибка ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return { items: data, isRoot: path === '' };
+                
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                return { items: [], error: error.message };
+            }
+        }
+
+        // Функция рендеринга списка
+        async function renderFileList(path = '') {
+            fileListEl.innerHTML = `<div class="loading"><div class="spinner">⏳</div><p>Загрузка...</p></div>`;
+            
+            const result = await getContents(path);
+            
+            if (result.error) {
+                fileListEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="big-icon">❌</div>
+                        <h3>Ошибка загрузки</h3>
+                        <p>${result.error}</p>
+                        <button class="btn" onclick="refreshList()" style="margin-top:15px;">Попробовать снова</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const items = result.items;
+            
+            // Фильтруем: папки и .ipa файлы
+            const folders = items.filter(item => item.type === 'dir');
+            const ipaFiles = items.filter(item => 
+                item.type === 'file' && item.name.toLowerCase().endsWith('.ipa')
+            );
+            
+            // Сортируем: сначала папки, потом файлы
+            const sorted = [...folders, ...ipaFiles];
+            
+            if (sorted.length === 0) {
+                fileListEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="big-icon">📭</div>
+                        <h3>Пусто</h3>
+                        <p>В этой папке нет IPA-файлов и подпапок</p>
+                        <button class="btn" onclick="openCreateFolder()" style="margin-top:15px;">📁 Создать папку</button>
+                    </div>
+                `;
+                updateBreadcrumb(path);
+                return;
+            }
+            
+            let html = '';
+            
+            sorted.forEach(item => {
+                const isFolder = item.type === 'dir';
+                const icon = isFolder ? '📁' : '📱';
+                
+                if (isFolder) {
+                    // Папка — кликабельная
+                    html += `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <span class="file-icon">${icon}</span>
+                                <a href="#" class="file-name" onclick="navigateTo('${item.path}'); return false;">
+                                    ${item.name}
+                                </a>
+                                <span class="file-meta">папка</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // IPA-файл — ссылка на скачивание
+                    const rawUrl = `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${BRANCH}/${item.path}`;
+                    const sizeMB = (item.size / 1024 / 1024).toFixed(2);
+                    
+                    html += `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <span class="file-icon">${icon}</span>
+                                <a href="${rawUrl}" class="file-name" download>
+                                    ${item.name}
+                                </a>
+                            </div>
+                            <span class="file-size">${sizeMB} MB</span>
+                        </div>
+                    `;
+                }
+            });
+            
+            fileListEl.innerHTML = html;
+            updateBreadcrumb(path);
+        }
+
+        // Обновление хлебных крошек
+        function updateBreadcrumb(path) {
+            const parts = path.split('/').filter(p => p);
+            let breadcrumbHtml = '';
+            let currentPath = '';
+            
+            parts.forEach((part, index) => {
+                currentPath += (currentPath ? '/' : '') + part;
+                const isLast = index === parts.length - 1;
+                breadcrumbHtml += ` / <span onclick="navigateTo('${currentPath}')" style="${isLast ? 'font-weight:600;color:#24292e;' : ''}">${part}</span>`;
+            });
+            
+            document.getElementById('path-display').innerHTML = breadcrumbHtml;
+        }
+
+        // Навигация по папкам
+        function navigateTo(path) {
+            currentPath = path;
+            renderFileList(path);
+        }
+
+        // Обновление списка
+        function refreshList() {
+            renderFileList(currentPath);
+            showStatus('Список обновлён ✅', 'success');
+        }
+
+        // Показать статус
+        function showStatus(message, type = 'success') {
+            statusMsg.textContent = message;
+            statusMsg.className = 'status-msg ' + type;
+            setTimeout(() => {
+                statusMsg.className = 'status-msg';
+            }, 5000);
+        }
+
+        // ---------- СОЗДАНИЕ ПАПКИ ----------
+        function openCreateFolder() {
+            document.getElementById('folderModal').classList.add('active');
+            document.getElementById('folderNameInput').value = '';
+            document.getElementById('folder-path-display').textContent = currentPath || '/';
+            document.getElementById('folderNameInput').focus();
+        }
+
+        function closeCreateFolder() {
+            document.getElementById('folderModal').classList.remove('active');
+        }
+
+        async function createFolder() {
+            const folderName = document.getElementById('folderNameInput').value.trim();
+            if (!folderName) {
+                showStatus('Введите имя папки', 'error');
+                return;
+            }
+            
+            // Проверка на недопустимые символы
+            if (!/^[a-zA-Z0-9\-_\.]+$/.test(folderName)) {
+                showStatus('Имя папки содержит недопустимые символы. Используйте буквы, цифры, - и _', 'error');
+                return;
+            }
+            
+            // Путь к новой папке
+            const folderPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+            
+            // Создаём файл .gitkeep в папке, чтобы зафиксировать её в репозитории
+            const fileContent = btoa('# Папка создана через веб-интерфейс\n');
+            const commitMessage = `Создана папка ${folderPath}`;
+            
+            const url = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${folderPath}/.gitkeep`;
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                
+                // if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+                
+                // Сначала проверяем, существует ли уже такая папка
+                const checkResponse = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${folderPath}?ref=${BRANCH}`);
+                if (checkResponse.ok) {
+                    showStatus(`Папка "${folderName}" уже существует!`, 'error');
+                    closeCreateFolder();
+                    return;
+                }
+                
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify({
+                        message: commitMessage,
+                        content: fileContent,
+                        branch: BRANCH
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Ошибка создания папки');
+                }
+                
+                showStatus(`Папка "${folderName}" успешно создана! ✅`, 'success');
+                closeCreateFolder();
+                refreshList();
+                
+            } catch (error) {
+                console.error(error);
+                showStatus(`Ошибка: ${error.message}`, 'error');
+            }
+        }
+
+        // Закрытие модалки по клику вне её
+        document.getElementById('folderModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCreateFolder();
+            }
+        });
+
+        // Enter в поле ввода
+        document.getElementById('folderNameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                createFolder();
+            }
+        });
+
+        // ---------- ЗАПУСК ----------
+        // Инициализация при загрузке страницы
+        renderFileList(currentPath);
+    </script>
+
+</body>
+</html>
